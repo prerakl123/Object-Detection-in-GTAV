@@ -10,6 +10,7 @@ import supervision as sv
 
 # External required modules
 from grabscreen import grab_screen
+from keys import NUM_ALL, CHAR_CAPS_ALL, CHAR_LOWERCASE_ALL
 
 
 warnings.filterwarnings('ignore')
@@ -33,8 +34,38 @@ def set_detections(model, detections, _id):
     return detections[detections.class_id == _id]
 
 
+def incremental_object_detection(k, model, detections):
+    global current_class, current_class_id
+
+    if k == 32:  # For Space key
+        if current_class_id == 79:
+            current_class_id = -1
+            current_class = ''
+        else:
+            return set_detections(model, detections, current_class_id + 1)
+    elif k == 8:  # For Backspace key
+        if current_class_id == -1:
+            return set_detections(model, detections, 79)
+        else:
+            return set_detections(model, detections, current_class_id - 1)
+    elif k == 97:
+        current_class_id = -1
+        current_class = ''
+    return detections
+
+
+def key_based_object_detection(k, model, detections):
+    if k in NUM_ALL:
+        return set_detections(model, detections, k - 48)
+    elif k in CHAR_CAPS_ALL:
+        return set_detections(model, detections, k - 55)
+    elif k in CHAR_LOWERCASE_ALL:
+        return set_detections(model, detections, k - 60)
+    return detections
+
+
 # ----- MAIN SCRIPT ----- #
-def main():
+def main(class_cycle_method=incremental_object_detection):
     global current_class, current_class_id  # Use the global variable
 
     # Add extra time for app switching
@@ -68,15 +99,7 @@ def main():
 
         # Update the current class based on the key pressed
         k = cv2.waitKey(10)
-        if k in range(48, 58):
-            detections = set_detections(model, detections, k - 48)
-            print(current_class)
-        elif k in range(65, 91):
-            detections = set_detections(model, detections, k - 55)
-            print(current_class)
-        elif k in range(97, 123):
-            detections = set_detections(model, detections, k - 60)
-            print(current_class)
+        detections = class_cycle_method(k, model, detections)
 
         labels = [
             f"{model.model.names[class_id]} {confidence:0.2f}"
@@ -87,6 +110,15 @@ def main():
             scene=screen,
             detections=detections,
             labels=labels
+        )
+        cv2.putText(
+            img=screen,
+            text=current_class,
+            org=(15, 25),
+            fontFace=cv2.FONT_HERSHEY_COMPLEX_SMALL,
+            fontScale=1,
+            thickness=2,
+            color=(255, 0, 0)
         )
 
         # Display the screen with the current class in the same window
