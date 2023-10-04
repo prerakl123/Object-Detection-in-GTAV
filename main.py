@@ -1,6 +1,7 @@
 # ----- IMPORT LIBRARIES ----- #
 # Built-ins
 import time
+import warnings
 
 # Image handling and detection
 import cv2
@@ -11,8 +12,31 @@ import supervision as sv
 from grabscreen import grab_screen
 
 
+warnings.filterwarnings('ignore')
+
+# ----- GLOBAL VARIABLES ----- #
+current_class = ""
+current_class_id = -1
+window_name = "yolov8"
+
+# Create a single window
+cv2.namedWindow(window_name)
+
+
+def set_detections(model, detections, _id):
+    global current_class, current_class_id
+
+    current_class = model.model.names[_id]
+    # print(current_class)
+    current_class_id = _id
+
+    return detections[detections.class_id == _id]
+
+
 # ----- MAIN SCRIPT ----- #
 def main():
+    global current_class, current_class_id  # Use the global variable
+
     # Add extra time for app switching
     print("Starting app...")
     for i in range(5, 0, -1):
@@ -28,21 +52,31 @@ def main():
         text_scale=0.5
     )
 
-    # Time calculation for testing model runtime
-    # last_time = time.time()
-
     # Main program loop
     while True:
         # Get the desktop screen of size 800x630
         screen = grab_screen(region=(0, 40, 800, 630))
 
-        # Convert from BGR to RGB for correct colouring
+        # Convert from BGR to RGB for correct coloring
         screen = cv2.cvtColor(screen, cv2.COLOR_BGR2RGB)
 
-        # detection from model
+        # Detection from model
         result = model(screen, agnostic_nms=True, verbose=False)[0]
         detections = sv.Detections.from_ultralytics(result)
-        # detections = detections[detections.class_id == 0]
+        if current_class_id != -1:
+            detections = set_detections(model, detections, current_class_id)
+
+        # Update the current class based on the key pressed
+        k = cv2.waitKey(10)
+        if k in range(48, 58):
+            detections = set_detections(model, detections, k - 48)
+            print(current_class)
+        elif k in range(65, 91):
+            detections = set_detections(model, detections, k - 55)
+            print(current_class)
+        elif k in range(97, 123):
+            detections = set_detections(model, detections, k - 60)
+            print(current_class)
 
         labels = [
             f"{model.model.names[class_id]} {confidence:0.2f}"
@@ -55,14 +89,11 @@ def main():
             labels=labels
         )
 
-        # Show the screen
-        cv2.imshow("yolov8", screen)
-
-        # print('{} seconds'.format(time.time() - last_time))
-        # last_time = time.time()
+        # Display the screen with the current class in the same window
+        cv2.imshow(window_name, screen)
 
         # 'Esc' character to exit and break the loop
-        if cv2.waitKey(30) == 27:
+        if k == 27:
             cv2.destroyAllWindows()
             break
 
