@@ -20,12 +20,12 @@ def main():
         time.sleep(1)
 
     # Define the model
-    model = YOLO("yolov8l.pt")
+    model = YOLO("yolov8l.pt").cuda()
 
     box_annotator = sv.BoxAnnotator(
-        thickness=2,
-        text_thickness=2,
-        text_scale=1
+        thickness=1,
+        text_thickness=1,
+        text_scale=0.5
     )
 
     # Time calculation for testing model runtime
@@ -40,8 +40,9 @@ def main():
         screen = cv2.cvtColor(screen, cv2.COLOR_BGR2RGB)
 
         # detection from model
-        result = model(screen)[0]
+        result = model(screen, agnostic_nms=True, verbose=False)[0]
         detections = sv.Detections.from_ultralytics(result)
+        # detections = detections[detections.class_id == 0]
 
         labels = [
             f"{model.model.names[class_id]} {confidence:0.2f}"
