@@ -5,13 +5,13 @@ import warnings
 
 # Image handling and detection
 import cv2
+import numpy as np
 from ultralytics import YOLO
 import supervision as sv
 
 # External required modules
 from grabscreen import grab_screen
 from keys import NUM_ALL, CHAR_CAPS_ALL, CHAR_LOWERCASE_ALL
-
 
 warnings.filterwarnings('ignore')
 
@@ -22,6 +22,32 @@ window_name = "yolov8"
 
 # Create a single window
 cv2.namedWindow(window_name)
+
+
+def show_incremental_keybind_info():
+    # Display
+    img = np.zeros((480, 640, 3), np.uint8)
+    put_text(img, org=(155, 40), text="To cycle through objects:")
+    put_text(img, org=(201, 80), text="Space | Cycle Next")
+    put_text(img, org=(143, 120), text="Backspace | Cycle Previous")
+    put_text(img, org=(262, 160), text="A | Show All")
+    put_text(img, org=(233, 200), text="Esc | Close")
+
+    # Display the image
+    cv2.imshow("Info", img)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+
+
+def put_text(
+        image, text,
+        org=(10, 20),
+        font=cv2.FONT_HERSHEY_SIMPLEX,
+        fontscale=0.8,
+        color=(255, 255, 255),
+        thickness=2, **kwargs
+):
+    cv2.putText(image, text, org, font, fontscale, color, thickness, **kwargs)
 
 
 def set_detections(model, detections, _id):
@@ -111,15 +137,7 @@ def main(class_cycle_method=incremental_object_detection):
             detections=detections,
             labels=labels
         )
-        cv2.putText(
-            img=screen,
-            text=current_class,
-            org=(15, 25),
-            fontFace=cv2.FONT_HERSHEY_COMPLEX_SMALL,
-            fontScale=1,
-            thickness=2,
-            color=(255, 0, 0)
-        )
+        put_text(screen, current_class, (15, 25), fontscale=1, color=(0, 0, 0))
 
         # Display the screen with the current class in the same window
         cv2.imshow(window_name, screen)
@@ -132,4 +150,5 @@ def main(class_cycle_method=incremental_object_detection):
 
 # Run main()
 if __name__ == '__main__':
+    show_incremental_keybind_info()
     main()
